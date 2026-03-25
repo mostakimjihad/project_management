@@ -126,6 +126,36 @@ async def delete_team(
     await db.commit()
 
 
+@router.get("/{team_id}/members", response_model=list)
+async def get_team_members(
+    team_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_active_user),
+):
+    """Get all members of a team."""
+    try:
+        team_uuid = uuid.UUID(team_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid team ID format")
+    
+    result = await db.execute(
+        select(TeamMember).where(TeamMember.team_id == team_uuid)
+    )
+    members = result.scalars().all()
+    
+    # Return serializable format
+    return [
+        {
+            "id": str(m.id),
+            "team_id": str(m.team_id),
+            "user_id": str(m.user_id),
+            "role": m.role,
+            "joined_at": m.joined_at.isoformat() if m.joined_at else None
+        }
+        for m in members
+    ]
+
+
 @router.post("/{team_id}/members", status_code=201)
 async def add_team_member(
     team_id: str,
@@ -134,10 +164,25 @@ async def add_team_member(
     current_user: dict = Depends(get_current_active_user),
 ):
     """Add member to team."""
+    try:
+        team_uuid = uuid.UUID(team_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid team ID format")
+    
+    # Check if member already exists
+    existing = await db.execute(
+        select(TeamMember).where(
+            TeamMember.team_id == team_uuid,
+            TeamMember.user_id == member_data.user_id
+        )
+    )
+    if existing.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail="User is already a member of this team")
+    
     member = TeamMember(
-        team_id=team_id,
+        team_id=team_uuid,
         user_id=member_data.user_id,
-        role=member_data.role,
+        role=member_data.role or "member",
     )
     db.add(member)
     await db.commit()
@@ -153,9 +198,14 @@ async def remove_team_member(
     current_user: dict = Depends(get_current_active_user),
 ):
     """Remove member from team."""
+    try:
+        team_uuid = uuid.UUID(team_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid team ID format")
+    
     result = await db.execute(
         select(TeamMember).where(
-            TeamMember.team_id == team_id,
+            TeamMember.team_id == team_uuid,
             TeamMember.user_id == user_id,
         )
     )

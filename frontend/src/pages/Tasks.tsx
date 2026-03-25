@@ -18,7 +18,6 @@ export default function Tasks() {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [viewMode, setViewMode] = useState<'table' | 'kanban'>('kanban')
-  const [initialStatus, setInitialStatus] = useState<string>('todo')
   const { token } = useAuth()
 
   const [formData, setFormData] = useState({
@@ -165,7 +164,6 @@ export default function Tasks() {
   }
 
   const handleAddTask = (status: string) => {
-    setInitialStatus(status)
     setFormData(prev => ({ ...prev, status: status as typeof prev.status }))
     setShowModal(true)
   }
@@ -233,7 +231,7 @@ export default function Tasks() {
               Table
             </button>
           </div>
-          <button className="btn btn-primary" onClick={() => { setInitialStatus('todo'); setShowModal(true); }}>
+          <button className="btn btn-primary" onClick={() => setShowModal(true)}>
             <Plus />New Task
           </button>
         </div>

@@ -4,8 +4,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
-from app.database import init_db, close_db
-from app.routes import auth, users, projects, tasks, teams, costs, risks, dashboard
+from app.database import init_db, close_db, seed_default_data
+from app.routes import auth, users, projects, tasks, teams, costs, risks, dashboard, roles
 
 
 @asynccontextmanager
@@ -13,6 +13,7 @@ async def lifespan(app: FastAPI):
     """Application lifespan events."""
     # Startup
     await init_db()
+    await seed_default_data()
     yield
     # Shutdown
     await close_db()
@@ -45,6 +46,7 @@ app.include_router(teams.router, prefix="/api/teams", tags=["Teams"])
 app.include_router(costs.router, prefix="/api/costs", tags=["Costs"])
 app.include_router(risks.router, prefix="/api/risks", tags=["Risks"])
 app.include_router(dashboard.router, prefix="/api/dashboard", tags=["Dashboard"])
+app.include_router(roles.router, prefix="/api/roles", tags=["Roles & Permissions"])
 
 
 @app.get("/", tags=["Root"])

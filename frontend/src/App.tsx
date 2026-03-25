@@ -6,10 +6,12 @@ import Dashboard from './pages/Dashboard'
 import Projects from './pages/Projects'
 import Tasks from './pages/Tasks'
 import Teams from './pages/Teams'
+import Roles from './pages/Roles'
+import UserApproval from './pages/UserApproval'
 import Sidebar from './components/Layout/Sidebar'
 import Header from './components/Layout/Header'
 
-export type Page = 'dashboard' | 'projects' | 'tasks' | 'teams' | 'risks' | 'costs'
+export type Page = 'dashboard' | 'projects' | 'tasks' | 'teams' | 'risks' | 'costs' | 'roles' | 'user-approval'
 
 function AppLayout() {
   const [currentPage, setCurrentPage] = useState<Page>('dashboard')
@@ -25,6 +27,8 @@ function AppLayout() {
       case 'teams': return { title: 'Teams', subtitle: 'Manage your teams and members' }
       case 'risks': return { title: 'Risks', subtitle: 'Monitor and mitigate risks' }
       case 'costs': return { title: 'Costs', subtitle: 'Track project expenses' }
+      case 'roles': return { title: 'Roles & Permissions', subtitle: 'Manage roles and access control' }
+      case 'user-approval': return { title: 'User Approval', subtitle: 'Review pending user registrations' }
       default: return { title: 'Dashboard', subtitle: '' }
     }
   }
@@ -37,6 +41,8 @@ function AppLayout() {
       case 'teams': return <Teams />
       case 'risks': return <div className="card"><div className="card-body"><p className="text-muted">Risk management coming soon...</p></div></div>
       case 'costs': return <div className="card"><div className="card-body"><p className="text-muted">Cost tracking coming soon...</p></div></div>
+      case 'roles': return <Roles />
+      case 'user-approval': return <UserApproval />
       default: return <Dashboard onNavigate={navigateTo} />
     }
   }

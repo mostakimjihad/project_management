@@ -45,8 +45,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const register = async (email: string, password: string, full_name: string) => {
+    // Only register - don't auto-login since user needs admin approval
     await api.post('/auth/register', { email, password, full_name, role: 'member' })
-    await login(email, password)
+    // Return successfully - user will see pending approval message
   }
 
   const logout = () => {

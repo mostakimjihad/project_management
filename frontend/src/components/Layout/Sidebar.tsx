@@ -5,10 +5,12 @@ import {
   Users, 
   AlertTriangle, 
   DollarSign,
+  Shield,
+  UserCheck,
   LogOut
 } from 'lucide-react'
 
-type PageType = 'dashboard' | 'projects' | 'tasks' | 'teams' | 'risks' | 'costs'
+type PageType = 'dashboard' | 'projects' | 'tasks' | 'teams' | 'risks' | 'costs' | 'roles' | 'user-approval'
 
 interface SidebarProps {
   currentPage: PageType
@@ -24,6 +26,8 @@ export default function Sidebar({ currentPage, onNavigate, onLogout }: SidebarPr
     { id: 'teams', label: 'Teams', icon: Users },
     { id: 'risks', label: 'Risks', icon: AlertTriangle },
     { id: 'costs', label: 'Costs', icon: DollarSign },
+    { id: 'roles', label: 'Roles & Permissions', icon: Shield },
+    { id: 'user-approval', label: 'User Approval', icon: UserCheck },
   ]
 
   return (

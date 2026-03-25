@@ -2,9 +2,9 @@
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, func
 from app.database import get_db
-from app.models.user import User, UserRole
+from app.models.user import User, UserRole, ApprovalStatus
 from app.schemas.auth import LoginRequest, LoginResponse, RegisterRequest, Token
 from app.schemas.user import UserResponse, UserCreate
 from app.utils.security import (
@@ -26,7 +26,7 @@ async def register(
     user_data: RegisterRequest,
     db: AsyncSession = Depends(get_db),
 ):
-    """Register a new user."""
+    """Register a new user. User will be pending approval by default."""
     # Check if email already exists
     result = await db.execute(
         select(User).where(User.email == user_data.email)
@@ -37,14 +37,16 @@ async def register(
             detail="Email already registered"
         )
     
-    # Create user
+    # Create user with pending approval status
     hashed_password = hash_password(user_data.password)
     user = User(
         email=user_data.email,
         password_hash=hashed_password,
         full_name=user_data.full_name,
-        role=user_data.role,
+        role=user_data.role or UserRole.MEMBER,
         hourly_rate=user_data.hourly_rate,
+        approval_status=ApprovalStatus.PENDING,
+        is_active=True,  # Will be activated upon approval
     )
     db.add(user)
     await db.commit()
@@ -69,6 +71,19 @@ async def login(
         raise HTTPException(
             status_code=401,
             detail="Incorrect email or password"
+        )
+    
+    # Check approval status
+    if user.approval_status == ApprovalStatus.PENDING:
+        raise HTTPException(
+            status_code=403,
+            detail="Your account is pending approval. Please wait for an administrator to approve your account."
+        )
+    
+    if user.approval_status == ApprovalStatus.REJECTED:
+        raise HTTPException(
+            status_code=403,
+            detail=f"Your account was rejected. Reason: {user.rejection_reason or 'Not specified'}"
         )
     
     if not user.is_active:
