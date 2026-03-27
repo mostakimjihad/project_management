@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../lib/auth/AuthContext'
-import { Plus, Users, AlertCircle, Trash2, Edit, UserPlus, X, ChevronDown, ChevronRight } from 'lucide-react'
+import { Plus, Users, AlertCircle, Trash2, Edit, UserPlus, X, ChevronDown, ChevronRight, Search, Crown, User as UserIcon, Mail } from 'lucide-react'
 import type { Team, TeamMember, User, PaginatedResponse } from '../lib/types'
 import Modal from '../components/ui/Modal'
 import api from '../lib/api'
@@ -32,6 +32,8 @@ export default function Teams() {
     user_id: '',
     role: 'member'
   })
+
+  const [userSearchQuery, setUserSearchQuery] = useState('')
 
   const fetchTeams = async () => {
     if (!token) return
@@ -120,6 +122,20 @@ export default function Teams() {
   const getAvailableUsersForNewTeam = () => {
     const selectedIds = new Set(newTeamMembers.map(m => m.user_id))
     return users.filter(u => !selectedIds.has(u.id))
+  }
+
+  const getFilteredAvailableUsers = () => {
+    const available = getAvailableUsersForNewTeam()
+    if (!userSearchQuery.trim()) return available
+    const query = userSearchQuery.toLowerCase()
+    return available.filter(u => 
+      u.full_name.toLowerCase().includes(query) || 
+      u.email.toLowerCase().includes(query)
+    )
+  }
+
+  const getUserInitials = (name: string) => {
+    return name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
   }
 
   const handleEditTeam = async (e: React.FormEvent) => {
@@ -353,7 +369,7 @@ export default function Teams() {
       </div>
 
       {/* Create Team Modal */}
-      <Modal isOpen={showModal} title="Create New Team" onClose={() => { setShowModal(false); setNewTeamMembers([]); }}>
+      <Modal isOpen={showModal} title="Create New Team" onClose={() => { setShowModal(false); setNewTeamMembers([]); setUserSearchQuery(''); }}>
         <form onSubmit={handleCreateTeam}>
           <div className="form-group">
             <label className="form-label">Team Name</label>
@@ -361,62 +377,156 @@ export default function Teams() {
           </div>
           <div className="form-group">
             <label className="form-label">Description</label>
-            <textarea className="form-textarea" value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} placeholder="Team description" />
+            <textarea className="form-textarea" value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} placeholder="Brief description of the team's purpose" rows={2} />
           </div>
           
-          {/* Add Members Section */}
-          <div className="form-group">
-            <label className="form-label">Team Members</label>
+          {/* Enhanced Add Members Section */}
+          <div className="form-group" style={{ marginTop: '20px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+              <label className="form-label" style={{ marginBottom: 0 }}>Team Members</label>
+              {newTeamMembers.length > 0 && (
+                <span style={{ 
+                  fontSize: '12px', 
+                  color: 'var(--gray-500)',
+                  background: 'var(--gray-100)',
+                  padding: '2px 8px',
+                  borderRadius: '12px'
+                }}>
+                  {newTeamMembers.length} member{newTeamMembers.length !== 1 ? 's' : ''} selected
+                </span>
+              )}
+            </div>
             
-            {/* Selected Members */}
+            {/* Selected Members - Enhanced Cards */}
             {newTeamMembers.length > 0 && (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '12px' }}>
+              <div style={{ 
+                display: 'flex', 
+                flexWrap: 'wrap', 
+                gap: '10px', 
+                marginBottom: '16px',
+                padding: '12px',
+                background: 'linear-gradient(135deg, var(--gray-50) 0%, var(--gray-100) 100%)',
+                borderRadius: 'var(--radius-md)',
+                border: '1px solid var(--gray-200)'
+              }}>
                 {newTeamMembers.map((member) => {
                   const user = users.find(u => u.id === member.user_id)
+                  const isLead = member.role === 'lead'
                   return (
                     <div 
                       key={member.user_id}
                       style={{ 
                         display: 'flex', 
                         alignItems: 'center', 
-                        gap: '8px',
-                        background: 'var(--gray-100)',
-                        border: '1px solid var(--gray-200)',
-                        borderRadius: 'var(--radius)',
-                        padding: '6px 10px',
-                        fontSize: '13px'
+                        gap: '10px',
+                        background: 'white',
+                        border: `1px solid ${isLead ? 'var(--accent-blue)' : 'var(--gray-200)'}`,
+                        borderRadius: 'var(--radius-md)',
+                        padding: '8px 12px',
+                        fontSize: '13px',
+                        boxShadow: 'var(--shadow-sm)',
+                        transition: 'all var(--transition-fast)',
+                        position: 'relative'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.transform = 'translateY(-1px)'
+                        e.currentTarget.style.boxShadow = 'var(--shadow)'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = 'translateY(0)'
+                        e.currentTarget.style.boxShadow = 'var(--shadow-sm)'
                       }}
                     >
-                      <div style={{ 
-                        width: '24px', 
-                        height: '24px', 
-                        borderRadius: '50%', 
-                        background: 'var(--primary)',
-                        color: 'white',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '10px',
-                        fontWeight: 500
-                      }}>
-                        {(user?.full_name || '').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
+                      {/* Avatar with role indicator */}
+                      <div style={{ position: 'relative' }}>
+                        <div style={{ 
+                          width: '32px', 
+                          height: '32px', 
+                          borderRadius: '50%', 
+                          background: isLead 
+                            ? 'linear-gradient(135deg, var(--accent-blue) 0%, var(--primary-500) 100%)'
+                            : 'linear-gradient(135deg, var(--gray-400) 0%, var(--gray-500) 100%)',
+                          color: 'white',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '11px',
+                          fontWeight: 600,
+                          boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                        }}>
+                          {getUserInitials(user?.full_name || '?')}
+                        </div>
+                        {isLead && (
+                          <div style={{
+                            position: 'absolute',
+                            bottom: -2,
+                            right: -2,
+                            width: '14px',
+                            height: '14px',
+                            background: 'var(--warning)',
+                            borderRadius: '50%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            border: '2px solid white'
+                          }}>
+                            <Crown size={8} style={{ color: 'white' }} />
+                          </div>
+                        )}
                       </div>
-                      <div>
-                        <span style={{ fontWeight: 500 }}>{user?.full_name}</span>
-                        <span style={{ marginLeft: '6px', fontSize: '11px', color: 'var(--gray-500)', textTransform: 'capitalize' }}>({member.role})</span>
+                      
+                      {/* User info */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                        <span style={{ fontWeight: 600, color: 'var(--gray-800)', fontSize: '13px' }}>{user?.full_name}</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          {isLead ? (
+                            <span style={{ 
+                              fontSize: '10px', 
+                              fontWeight: 600,
+                              color: 'var(--accent-blue)',
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.5px'
+                            }}>
+                              Team Lead
+                            </span>
+                          ) : (
+                            <span style={{ 
+                              fontSize: '10px', 
+                              color: 'var(--gray-500)',
+                              textTransform: 'capitalize'
+                            }}>
+                              Member
+                            </span>
+                          )}
+                        </div>
                       </div>
+                      
+                      {/* Remove button */}
                       <button
                         type="button"
                         onClick={() => removeMemberFromNewTeam(member.user_id)}
                         style={{ 
-                          background: 'none', 
+                          background: 'var(--gray-100)', 
                           border: 'none', 
                           cursor: 'pointer',
                           color: 'var(--gray-400)',
-                          padding: '2px',
-                          marginLeft: '4px'
+                          padding: '4px',
+                          borderRadius: 'var(--radius-sm)',
+                          marginLeft: '4px',
+                          transition: 'all var(--transition-fast)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
                         }}
-                        title="Remove"
+                        title="Remove member"
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = 'var(--danger-light)'
+                          e.currentTarget.style.color = 'var(--danger)'
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = 'var(--gray-100)'
+                          e.currentTarget.style.color = 'var(--gray-400)'
+                        }}
                       >
                         <X size={14} />
                       </button>
@@ -426,50 +536,278 @@ export default function Teams() {
               </div>
             )}
             
-            {/* Add Member Row */}
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
-              <div style={{ flex: 1 }}>
-                <select 
-                  className="form-input"
-                  value={memberFormData.user_id}
-                  onChange={(e) => setMemberFormData({ ...memberFormData, user_id: e.target.value })}
-                  style={{ height: '38px' }}
-                >
-                  <option value="">Select a user...</option>
-                  {getAvailableUsersForNewTeam().map(user => (
-                    <option key={user.id} value={user.id}>
-                      {user.full_name} ({user.email})
-                    </option>
-                  ))}
-                </select>
+            {/* Add New Member - Enhanced UI */}
+            <div style={{ 
+              background: 'white',
+              border: '1px solid var(--gray-200)',
+              borderRadius: 'var(--radius-md)',
+              overflow: 'hidden'
+            }}>
+              {/* Search Input */}
+              <div style={{ 
+                padding: '12px', 
+                borderBottom: '1px solid var(--gray-100)',
+                background: 'var(--gray-50)'
+              }}>
+                <div style={{ 
+                  position: 'relative',
+                  display: 'flex',
+                  alignItems: 'center'
+                }}>
+                  <Search size={16} style={{ 
+                    position: 'absolute', 
+                    left: '12px', 
+                    color: 'var(--gray-400)' 
+                  }} />
+                  <input 
+                    type="text"
+                    placeholder="Search users by name or email..."
+                    value={userSearchQuery}
+                    onChange={(e) => setUserSearchQuery(e.target.value)}
+                    style={{ 
+                      width: '100%',
+                      padding: '10px 12px 10px 38px',
+                      border: '1px solid var(--gray-200)',
+                      borderRadius: 'var(--radius)',
+                      fontSize: '13px',
+                      background: 'white',
+                      transition: 'all var(--transition-fast)'
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = 'var(--accent-blue)'
+                      e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)'
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = 'var(--gray-200)'
+                      e.target.style.boxShadow = 'none'
+                    }}
+                  />
+                </div>
               </div>
-              <select 
-                className="form-input"
-                value={memberFormData.role}
-                onChange={(e) => setMemberFormData({ ...memberFormData, role: e.target.value })}
-                style={{ width: '120px', height: '38px' }}
-              >
-                <option value="member">Member</option>
-                <option value="lead">Team Lead</option>
-              </select>
-              <button 
-                type="button" 
-                className="btn btn-secondary"
-                onClick={addMemberToNewTeam}
-                disabled={!memberFormData.user_id}
-                style={{ height: '38px', padding: '0 12px' }}
-              >
-                <Plus size={16} />
-              </button>
+              
+              {/* User List */}
+              <div style={{ 
+                maxHeight: '200px', 
+                overflowY: 'auto',
+                padding: '8px'
+              }}>
+                {getFilteredAvailableUsers().length === 0 ? (
+                  <div style={{ 
+                    padding: '24px', 
+                    textAlign: 'center', 
+                    color: 'var(--gray-400)',
+                    fontSize: '13px'
+                  }}>
+                    <UserIcon size={24} style={{ marginBottom: '8px', opacity: 0.5 }} />
+                    <div>{userSearchQuery ? 'No users match your search' : 'No available users'}</div>
+                  </div>
+                ) : (
+                  getFilteredAvailableUsers().slice(0, 5).map((user) => (
+                    <div
+                      key={user.id}
+                      onClick={() => {
+                        setMemberFormData({ ...memberFormData, user_id: user.id })
+                        setUserSearchQuery('')
+                      }}
+                      style={{ 
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px',
+                        padding: '10px 12px',
+                        borderRadius: 'var(--radius)',
+                        cursor: 'pointer',
+                        transition: 'all var(--transition-fast)',
+                        background: memberFormData.user_id === user.id ? 'var(--info-light)' : 'transparent',
+                        border: memberFormData.user_id === user.id ? '1px solid var(--accent-blue)' : '1px solid transparent'
+                      }}
+                      onMouseEnter={(e) => {
+                        if (memberFormData.user_id !== user.id) {
+                          e.currentTarget.style.background = 'var(--gray-50)'
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (memberFormData.user_id !== user.id) {
+                          e.currentTarget.style.background = 'transparent'
+                        }
+                      }}
+                    >
+                      <div style={{ 
+                        width: '36px', 
+                        height: '36px', 
+                        borderRadius: '50%', 
+                        background: 'linear-gradient(135deg, var(--primary-400) 0%, var(--primary-600) 100%)',
+                        color: 'white',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '12px',
+                        fontWeight: 600,
+                        flexShrink: 0
+                      }}>
+                        {getUserInitials(user.full_name)}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ 
+                          fontWeight: 500, 
+                          color: 'var(--gray-800)',
+                          fontSize: '13px',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis'
+                        }}>
+                          {user.full_name}
+                        </div>
+                        <div style={{ 
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          fontSize: '12px', 
+                          color: 'var(--gray-500)'
+                        }}>
+                          <Mail size={12} />
+                          <span style={{
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis'
+                          }}>
+                            {user.email}
+                          </span>
+                        </div>
+                      </div>
+                      {memberFormData.user_id === user.id && (
+                        <div style={{
+                          width: '20px',
+                          height: '20px',
+                          background: 'var(--accent-blue)',
+                          borderRadius: '50%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}>
+                          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                            <path d="M2 6L5 9L10 3" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>
+                        </div>
+                      )}
+                    </div>
+                  ))
+                )}
+                {getFilteredAvailableUsers().length > 5 && (
+                  <div style={{ 
+                    padding: '8px 12px', 
+                    fontSize: '12px', 
+                    color: 'var(--gray-500)',
+                    textAlign: 'center',
+                    borderTop: '1px solid var(--gray-100)',
+                    marginTop: '4px'
+                  }}>
+                    +{getFilteredAvailableUsers().length - 5} more users. Type to search...
+                  </div>
+                )}
+              </div>
+              
+              {/* Role Selection and Add Button */}
+              <div style={{ 
+                display: 'flex', 
+                gap: '8px', 
+                padding: '12px',
+                borderTop: '1px solid var(--gray-100)',
+                background: 'var(--gray-50)'
+              }}>
+                <div style={{ 
+                  flex: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}>
+                  <span style={{ fontSize: '12px', color: 'var(--gray-500)' }}>Role:</span>
+                  <div style={{ display: 'flex', gap: '4px' }}>
+                    <button
+                      type="button"
+                      onClick={() => setMemberFormData({ ...memberFormData, role: 'member' })}
+                      style={{ 
+                        padding: '6px 12px',
+                        fontSize: '12px',
+                        fontWeight: 500,
+                        border: '1px solid',
+                        borderColor: memberFormData.role === 'member' ? 'var(--accent-blue)' : 'var(--gray-300)',
+                        borderRadius: 'var(--radius)',
+                        background: memberFormData.role === 'member' ? 'var(--accent-blue)' : 'white',
+                        color: memberFormData.role === 'member' ? 'white' : 'var(--gray-600)',
+                        cursor: 'pointer',
+                        transition: 'all var(--transition-fast)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}
+                    >
+                      <UserIcon size={12} />
+                      Member
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMemberFormData({ ...memberFormData, role: 'lead' })}
+                      style={{ 
+                        padding: '6px 12px',
+                        fontSize: '12px',
+                        fontWeight: 500,
+                        border: '1px solid',
+                        borderColor: memberFormData.role === 'lead' ? 'var(--warning)' : 'var(--gray-300)',
+                        borderRadius: 'var(--radius)',
+                        background: memberFormData.role === 'lead' ? 'var(--warning)' : 'white',
+                        color: memberFormData.role === 'lead' ? 'white' : 'var(--gray-600)',
+                        cursor: 'pointer',
+                        transition: 'all var(--transition-fast)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}
+                    >
+                      <Crown size={12} />
+                      Team Lead
+                    </button>
+                  </div>
+                </div>
+                <button 
+                  type="button" 
+                  className="btn btn-primary"
+                  onClick={addMemberToNewTeam}
+                  disabled={!memberFormData.user_id}
+                  style={{ 
+                    padding: '8px 16px',
+                    opacity: memberFormData.user_id ? 1 : 0.5
+                  }}
+                >
+                  <Plus size={16} />
+                  Add Member
+                </button>
+              </div>
             </div>
-            <div style={{ fontSize: '12px', color: 'var(--gray-500)', marginTop: '4px' }}>
-              Select users and click + to add them to the team
+            
+            {/* Helper text */}
+            <div style={{ 
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontSize: '12px', 
+              color: 'var(--gray-500)', 
+              marginTop: '8px',
+              padding: '8px 12px',
+              background: 'var(--info-light)',
+              borderRadius: 'var(--radius)',
+              border: '1px solid var(--accent-blue)'
+            }}>
+              <Users size={14} style={{ color: 'var(--accent-blue)', flexShrink: 0 }} />
+              <span>Search and select team members. Assign <strong>Team Lead</strong> role to members who will manage this team.</span>
             </div>
           </div>
           
-          <div className="flex gap-2 justify-end mt-4">
-            <button type="button" className="btn btn-secondary" onClick={() => { setShowModal(false); setNewTeamMembers([]); }}>Cancel</button>
-            <button type="submit" className="btn btn-primary">Create Team</button>
+          <div className="flex gap-2 justify-end mt-6" style={{ paddingTop: '16px', borderTop: '1px solid var(--gray-200)' }}>
+            <button type="button" className="btn btn-secondary" onClick={() => { setShowModal(false); setNewTeamMembers([]); setUserSearchQuery(''); }}>Cancel</button>
+            <button type="submit" className="btn btn-primary">
+              <Plus size={16} />
+              Create Team
+            </button>
           </div>
         </form>
       </Modal>
